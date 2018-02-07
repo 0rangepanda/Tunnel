@@ -1,0 +1,7 @@
+router: 1, pid: 16126, port: 38300
+ICMP from port: 62357, src: 10.5.51.2, dst: 10.5.51.4, type: 8
+ICMP from port: 62357, src: 10.5.51.2, dst: 10.5.51.4, type: 8
+ICMP from port: 62357, src: 10.5.51.2, dst: 10.5.51.4, type: 8
+ICMP from port: 62357, src: 10.5.51.2, dst: 10.5.51.4, type: 8
+ICMP from port: 62357, src: 10.5.51.2, dst: 10.5.51.4, type: 8
+Clean up router process!

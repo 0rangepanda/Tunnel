@@ -89,7 +89,7 @@ void* Proxy(void* arg)
                     if(FD_ISSET(sock, &readset))
                     {
                         strLen = recvfrom(sock, buffer, BUF_SIZE, 0, (struct sockaddr*) &routerAddr, (socklen_t*) &nSize);
-                        printf("\nProxy: Read a packet from tunnel, packet length:%d\n", strLen);
+                        printf("\nProxy: Read a packet from Router, packet length:%d\n", strLen);
 
                         Packet *p = new Packet(buffer, strLen);
                         if (p->parse())
@@ -121,6 +121,8 @@ void* Proxy(void* arg)
                             Packet *p = new Packet(buffer, nread);
                             if (p->parse())
                             {
+                                std::cout << "parse" << "\n";
+                                p->printPacket();
                                 LOG(logfd, "ICMP from tunnel, src: %s, dst: %s, type: %d\n", p->src.data(), p->dst.data(), p->type);
                                 //send it to the router
                                 p->sendUDP(&routerAddr, sock, p->getPacket(), p->getPacketLen());

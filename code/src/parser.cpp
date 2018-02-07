@@ -80,7 +80,7 @@ int Packet::printPacket() {
         sprintf(&converted[i*2], "%02X", *(packet+i));
     }
 
-    for (size_t i = 0; i < len/4; ++i)
+    for (size_t i = 0; i < len/8; ++i)
     {
         printf("%c%c : %c%c : %c%c : %c%c\n",
             converted[8*i+0],converted[8*i+1],converted[8*i+2],converted[8*i+3],
@@ -114,11 +114,7 @@ int Packet::icmpReply()
 *******************************************************************/
 char* Packet::getPacket()
 {
-    char buf[len];
-    char *ret = buf;
-    for (int i = 0; i < len; ++i)
-        buf[i] = *(packet+i);
-    return ret;
+    return packet;
 }
 
 int Packet::getPacketLen() {
