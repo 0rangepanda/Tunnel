@@ -1,7 +1,7 @@
 TARGET = proja
 
 CPP = g++
-CPPFLAGS = -std=c++11 -c -o
+CPPFLAGS = -std=c++11 -g -c -o
 
 SRCS = $(shell ls *.cpp)
 BASE = $(basename $(SRCS))
@@ -16,11 +16,11 @@ INCLUDEDIR := -I.\
 
 $(TARGET):$(OBJS)
 		-rm -f $@
-		$(CPP) -o $(TARGET) $(OBJS)
+		$(CPP) -o $(TARGET) $(OBJS) -lpthread
 
 obj/%.o: %.cpp
 		@if test ! -d "obj"; then mkdir -p obj; else : ; fi
-		$(CPP) $(CPPFLAGS) $@ $(INCLUDEDIR) $<
+		$(CPP) $(CPPFLAGS) $@ -lpthread $(INCLUDEDIR) $<
 
 dep/%.d: %.cpp
 		@if test ! -d "dep"; then mkdir -p dep; else : ; fi

@@ -3,9 +3,11 @@
 
 #include "common.h"
 #include "utils.h"
+#include "parser.h"
 
 /*------------------------------Functions--------------------------------------*/
 
-extern void Proxy(int sock, struct sockaddr_in *addr);
+extern void* Proxy(void* arg);
+extern void* Monitor(void* arg);
 
 #endif

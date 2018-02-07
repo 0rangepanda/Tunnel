@@ -9,7 +9,18 @@
 /* -------------------- Global Variables -------------------- */
 int stage;
 int num_routers;
+pid_t router_pid;
 short unsigned int udp_port;
 
+FILE *logfd;
+
+sigset_t signal_set;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_t proxy_thread, monitor_thread;
+
+/* -------------- Global Variables for Proxy Only --------------- */
+int sock;
+int tun_fd;
+struct sockaddr_in addr;
 
 #endif

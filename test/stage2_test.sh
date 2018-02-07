@@ -1,9 +1,15 @@
 #!/bin/sh
 srcdir=`pwd`
 
+cd ../code/src
+make proja
 
 echo '\n\n\n\n'
 
-#create a tunnel and configure it.
-sudo ip tuntap add dev tun1 mode tun
-sudo ifconfig tun1 10.5.51.2/24 up
+# test cases
+./proja
+./proja $srcdir/conf_stage2
+
+echo '\n\n\n\n'
+make clean
+rm -rf stage2*

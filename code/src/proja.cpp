@@ -38,29 +38,25 @@ void ParseCommandLine(int argc, const char *argv[])
 static
 void Process()
 {
+    /* Handling Ctrl+C */
+    sigemptyset(&signal_set);
+    sigaddset(&signal_set, SIGINT);
+    sigprocmask(SIG_BLOCK, &signal_set, 0);
+
+    /* Parse configuration file */
     parseConf(FILEPATH);
-    cout << "stage: " << stage << endl;
-    cout << "num_routers: " << num_routers << endl;
 
     //create a dynamic (operating-system assigned) UDP port
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    //shoud be done befor fork() so that router can get the port by global var
+    sock = UDP_alloc(&addr);
 
-    struct sockaddr_in addr;
-    socklen_t addrlen = sizeof(addr);
-
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    addr.sin_port = htons(0);
-    bind(sock, (struct sockaddr*)&addr, sizeof(addr));
-    getsockname(sock, (struct sockaddr*)&addr, &addrlen);
-
-    //std::cout << "udp_port: " <<  addr.sin_port << "\n";
+    std::cout << "udp_port: " <<  addr.sin_port << "\n";
     udp_port = addr.sin_port;
 
     //fork then
     pid_t fpid;
     fpid=fork();
+    router_pid = fpid;
 
     if (fpid < 0)
     {
@@ -76,9 +72,14 @@ void Process()
     else {
         // Code only executed by parent process
         printf("i am the parent Proxy process, my process id is %d\n",getpid());
-        Proxy(sock, &addr);
-    }
 
+        pthread_create(&proxy_thread, NULL, Proxy, NULL);
+        pthread_create(&monitor_thread, NULL, Monitor, NULL);
+
+        pthread_join(proxy_thread,0);
+        pthread_cancel(monitor_thread);
+        printf("Finish cleanning up, program end!\n");
+    }
     return;
 }
 
