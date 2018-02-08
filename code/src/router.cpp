@@ -5,7 +5,7 @@
     by signal but itself, then WIFSIGNALED(status) will return false
 *******************************************************************/
 void Cleanup(int sig_num){
-   LOG(logfd, "Clean up router process!\n");
+   //LOG(logfd, "Clean up router process!\n");
    fflush(logfd);
 
    close(sock);
