@@ -58,7 +58,7 @@ void Router() {
                 LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n", proxyAddr.sin_port, p->src.data(), p->dst.data(), p->type);
                 //send it to the router
                 p->icmpReply();
-                p->printPacket();
+                //p->printPacket();
                 p->sendUDP(&proxyAddr, sock, p->getPacket(), p->getPacketLen());
             }
             else

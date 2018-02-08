@@ -95,7 +95,7 @@ void* Proxy(void* arg)
                         if (p->parse())
                         {
                             LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n", routerAddr.sin_port, p->src.data(), p->dst.data(), p->type);
-                            p->printPacket();
+                            //p->printPacket();
                             //send it to the tunnel
                             write(tun_fd, p->getPacket(), p->getPacketLen());
                         }
@@ -122,7 +122,7 @@ void* Proxy(void* arg)
                             if (p->parse())
                             {
                                 std::cout << "parse" << "\n";
-                                p->printPacket();
+                                //p->printPacket();
                                 LOG(logfd, "ICMP from tunnel, src: %s, dst: %s, type: %d\n", p->src.data(), p->dst.data(), p->type);
                                 //send it to the router
                                 p->sendUDP(&routerAddr, sock, p->getPacket(), p->getPacketLen());
