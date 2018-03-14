@@ -8,24 +8,35 @@
 class Packet
 {
 public:
-    int type;
-    string src;
-    string dst;
+        int type;
+        string src;
+        string dst;
 
-    Packet(char* buf, int read);
-    int parse();
-    char* getPacket();
-    int getPacketLen();
-    
-    int icmpReply();
-    int sendUDP(struct sockaddr_in *addr, int sock, char* payload, int len);
+        Packet(char* buf, int read);
 
-    int printPacket();
-    int printICMP();
+        char* getPacket();      //for whole packet
+        int getPacketLen();
+        char* getPayload();        //for payload
+        int getPayloadLen();
+
+        int parse();
+        int icmpReply();
+        int changeDst(string dstIP);
+        int sendUDP(struct sockaddr_in *addr, int sock, char* payload, int len);
+
+        int printPacket();
+        int printICMP();
+
+        int ifICMP();
+        int ifSrc();
 
 private:
-    char* packet;
-    int len;
+        // whole packet
+        char* packet;
+        int len;
+        // exclude IPV4 header
+        //char* payload;
+        //int pay_len;
 };
 
 

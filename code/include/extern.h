@@ -13,9 +13,14 @@ extern sigset_t signal_set;
 extern pthread_mutex_t mutex;
 extern pthread_t proxy_thread, monitor_thread;
 
+extern struct sockaddr_in* eth;
+
 /* -------------- Global Variables for Proxy Only --------------- */
 extern int sock;
 extern int tun_fd;
 extern struct sockaddr_in addr;
+
+/* -------------- Global Variables for Router Only -------------- */
+extern int raw_sock;
 
 #endif

@@ -18,9 +18,14 @@ sigset_t signal_set;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_t proxy_thread, monitor_thread;
 
+struct sockaddr_in* eth;
+
 /* -------------- Global Variables for Proxy Only --------------- */
 int sock;
 int tun_fd;
 struct sockaddr_in addr;
+
+/* -------------- Global Variables for Router Only -------------- */
+int raw_sock = 0;
 
 #endif

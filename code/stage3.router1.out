@@ -1,0 +1,7 @@
+router: 0, pid: 3652, port: 56533
+ICMP from port: 26504, src: 10.0.2.15, dst: 23.185.0.3, type: 8
+ICMP from raw sock, src: 23.185.0.3, dst: 192.168.201.2, type: 0
+ICMP from port: 26504, src: 10.0.2.15, dst: 23.185.0.3, type: 8
+ICMP from raw sock, src: 23.185.0.3, dst: 192.168.201.2, type: 0
+ICMP from port: 26504, src: 10.0.2.15, dst: 23.185.0.3, type: 8
+ICMP from raw sock, src: 23.185.0.3, dst: 192.168.201.2, type: 0
