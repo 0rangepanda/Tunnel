@@ -16,6 +16,8 @@ RouterClass::RouterClass(int Istage, int num, struct sockaddr_in* addr) {
         proxyAddr->sin_family = AF_INET;
         proxyAddr->sin_addr.s_addr = addr->sin_addr.s_addr;
         proxyAddr->sin_port = addr->sin_port;
+
+        selfIP = inet_ntoa(eth[id].sin_addr);
 };
 
 /**************************************************************************
@@ -32,6 +34,7 @@ FILE* RouterClass::startLog() {
                 sprintf(filename, "stage%d.router%d.out", stage, id+1);
         }
         logfd = fopen(filename, "w+");
+
         return logfd;
 };
 
@@ -41,7 +44,7 @@ FILE* RouterClass::startLog() {
 int RouterClass::stage1() {
         /* bind a socket and get a dynamic UDP port*/
         sock = UDP_alloc(selfAddr);
-        LOG(logfd, "router: %d, pid: %d, port: %d\n", id, getpid(), selfAddr->sin_port);
+        LOG(logfd, "router: %d, pid: %d, port: %d\n", 1, getpid(), selfAddr->sin_port);
 
         /* send port to Proxy*/
         char buffer[BUF_SIZE];
@@ -52,6 +55,9 @@ int RouterClass::stage1() {
         return sock;
 };
 
+/**************************************************************************
+* For debug
+**************************************************************************/
 int RouterClass::showIP(){
         printf("Router IP address: %s\n", inet_ntoa(selfAddr->sin_addr));
 }

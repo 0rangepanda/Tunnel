@@ -23,7 +23,13 @@ void Router(int router_id) {
 
         RouterClass *router = new RouterClass(stage, router_id, &addr);
         logfd = router->startLog();
-        sock = router->stage1();
+
+        if (stage<4)
+        {
+                sock = router->stage1();
+        }
+        else
+                sock = router->stage4();
 
         router->showIP();
 
@@ -60,11 +66,21 @@ void Router(int router_id) {
                         default:
                                 if(FD_ISSET(sock, &readset))
                                 {
-                                        router->readFromProxy();
+                                        if (stage<5)
+                                                router->readFromProxy();
+                                        else if (stage==5)
+                                                router->readFromProxy_5();
+                                        else if (stage==6)
+                                                router->readFromProxy_6();
                                 }
                                 if(FD_ISSET(raw_sock, &readset))
                                 {
-                                        router->readFromRaw();
+                                        if (stage<5)
+                                                router->readFromRaw();
+                                        else if(stage==5)
+                                                router->readFromRaw_5();
+                                        else if(stage==6)
+                                                router->readFromRaw_6();
                                 }
                         }
                         pthread_mutex_unlock(&mutex);

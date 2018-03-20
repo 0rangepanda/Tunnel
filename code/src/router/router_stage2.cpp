@@ -12,7 +12,7 @@ int RouterClass::readFromProxy()
 
         int strLen = recvfrom(sock, buffer, BUF_SIZE, 0,
                               (struct sockaddr*) proxyAddr, (socklen_t*) &nSize);
-        printf("\nRouter: Read a packet from proxy, packet length:%d\n", strLen);
+        printf("\nRouter%d: Read a packet from proxy, packet length:%d\n", id+1, strLen);
 
         //get an ICMP ECHO packet from Proxy
         //reply to any ping packets that are addressed to itself
@@ -32,6 +32,7 @@ int RouterClass::readFromProxy()
                         p->sendUDP(proxyAddr, sock, p->getPacket(), p->getPacketLen());
                 }
                 else{
+                        // stage 4
                         printf("Router%d: rewrite and send!\n", id+1);
                         //save key-val
                         record(p);
@@ -65,7 +66,7 @@ int RouterClass::sendtoMe(Packet* p, int socket)
                 } catch (invalid_argument& e) {
                         //std::cout << "conversion failed" << std::endl;
                 }
-                
+
                 if (dst.substr(0,8)=="10.5.51." &&
                     x>0 && x<256 && x!=2) {
                         return 1;

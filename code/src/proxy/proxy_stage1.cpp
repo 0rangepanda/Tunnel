@@ -19,6 +19,7 @@ FILE* ProxyClass::startLog() {
         char filename[MAXPATHLENGTH];
         sprintf(filename, "stage%d.proxy.out", stage);
         logfd = fopen(filename, "w+");
+        //logfd = stdout;
         LOG(logfd, "proxy port: %d\n", udp_port);
         return logfd;
 };
@@ -35,6 +36,6 @@ int ProxyClass::stage1() {
                               (struct sockaddr *)routerAddr, (socklen_t *)&nSize);
         printf("\nRead a packet from router, packet length:%d\n", strLen);
         int router_pid = atoi(buffer);
-        LOG(logfd, "router: %d, pid: %d, port: %d\n", num_routers, router_pid,
+        LOG(logfd, "router: %d, pid: %d, port: %d\n", 1, router_pid,
             routerAddr->sin_port);
 };

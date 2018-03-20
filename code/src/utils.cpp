@@ -3,7 +3,7 @@
 #include "utils.h"
 
 /**************************************************************************
-    Check a filepath, if not directory, return 0
+* Check a filepath, if not directory, return 0
 **************************************************************************/
 int isDirectory(const char *path)
 {
@@ -14,10 +14,10 @@ int isDirectory(const char *path)
 }
 
 /**************************************************************************
-   Check a filepath
-    not exist,   return -1
-    directory,   return 0
-    normal file, return 1
+* Check a filepath
+* not exist,   return -1
+* directory,   return 0
+* normal file, return 1
 **************************************************************************/
 int checkFile(const char *path)
 {
@@ -35,7 +35,7 @@ int checkFile(const char *path)
 }
 
 /**************************************************************************
-    Parse Configuration File
+* Parse Configuration File
 **************************************************************************/
 int parseConf(const char *path)
 {
@@ -56,7 +56,26 @@ int parseConf(const char *path)
                                 stage = std::stoi(*++i);
                         else if (*i == "num_routers")
                                 num_routers = std::stoi(*++i);
+                        else if (*i == "minitor_hops")
+                                minitor_hops = std::stoi(*++i);
                 }
+        }
+
+        //check num
+        if (stage<4 && num_routers!=1)
+        {
+            fprintf(stderr, "Invalid router number!");
+            exit(-1);
+        }
+        else if (stage>3 && (num_routers<1 || num_routers>6))
+        {
+            fprintf(stderr, "Invalid router number!");
+            exit(-1);
+        }
+        else if (stage>4 && (minitor_hops<1 || minitor_hops>num_routers))
+        {
+            fprintf(stderr, "Invalid router number!");
+            exit(-1);
         }
 
         cout << "stage: " << stage << '\t' << "num_routers: " << num_routers << endl;
@@ -64,10 +83,11 @@ int parseConf(const char *path)
 }
 
 /**************************************************************************
-    A wrapper of fprintf for writing line to LOG File
+* A wrapper of fprintf for writing line to LOG File
 **************************************************************************/
 void LOG(FILE *fp, const char *format,...)
 {
+        //pthread_mutex_lock(&mutex);
         va_list args;
         char msg[MAXSIZE];
         int msgsize;
@@ -77,6 +97,8 @@ void LOG(FILE *fp, const char *format,...)
         if(msgsize < 0)
                 return;
         fprintf(fp,"%s",msg);
+
+        //pthread_mutex_unlock(&mutex);
 }
 
 /**************************************************************************
@@ -132,4 +154,19 @@ int UDP_alloc(struct sockaddr_in *addr)
         bind(sock, (struct sockaddr*) addr, addrlen);
         getsockname(sock, (struct sockaddr*) addr, &addrlen);
         return sock;
+}
+
+/**************************************************************************
+* Convert a packet to a hex string
+**************************************************************************/
+char* packet_str(char* buffer, int len)
+{
+        //char ret[len*2+1];
+        char* ret = (char*)malloc(sizeof(char)*(len*2+1));
+
+        for (size_t i = 0; i < len; i++) {
+                sprintf(&ret[i*2], "%02X", (unsigned char) *(buffer+i));
+        }
+        ret[len*2] = '\0';
+        return ret;
 }

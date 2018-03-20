@@ -12,7 +12,7 @@ Packet::Packet(char* buf, int nread)
 
 /*******************************************************************
 * Parse the packet, get type, src and dst
-* NOTE: if a ICMP packet type=8
+* NOTE: if a ICMP packet type=8, return ture
 *******************************************************************/
 int Packet::parse()
 {
@@ -44,7 +44,7 @@ int Packet::parse()
         dst = ss.str().substr(0, ss.str().length()-1);
 
         //cout << dst << " : " << src <<endl;
-        return 1;
+        return type==8 || type==0;
 }
 
 
@@ -121,12 +121,34 @@ int Packet::icmpReply()
         return 0;
 }
 
+
+/*******************************************************************
+* change the src of packet
+*******************************************************************/
+int Packet::changeSrc(string srcIP)
+{
+        //get dst ip address in a 32bit int
+        struct sockaddr_in src;
+        memset(&src, 0, sizeof(struct sockaddr_in));
+        inet_aton(srcIP.c_str(), &src.sin_addr);
+        int ip = src.sin_addr.s_addr;
+
+        //change dst in place
+        for(size_t i=0; i<4; i++)
+        {
+                *(packet+IPV4_OFFSET-8+i) = (ip >> 8*i) & 0xFF;
+        }
+
+        return 1;
+}
+
+
 /*******************************************************************
 * change the dst of packet
 *******************************************************************/
 int Packet::changeDst(string dstIP)
 {
-        //get dst ip address in HEX
+        //get dst ip address in a 32bit int
         struct sockaddr_in dst;
         memset(&dst, 0, sizeof(struct sockaddr_in));
         inet_aton(dstIP.c_str(), &dst.sin_addr);
@@ -135,7 +157,7 @@ int Packet::changeDst(string dstIP)
         //change dst in place
         for(size_t i=0; i<4; i++)
         {
-                *(packet+IPV4_OFFSET-4+i) = (ip >> 8*i) & 0xFF;;
+                *(packet+IPV4_OFFSET-4+i) = (ip >> 8*i) & 0xFF;
         }
 
         return 1;

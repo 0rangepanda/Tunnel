@@ -49,6 +49,8 @@ int RouterClass::rewritePkt(Packet* p){
         if (sendmsg(raw_socket, &msgsent, 0)==-1) {
                 perror("sendmsg");
         }
+        else
+                printf("Rewrite msg to the Internet!\n");
         return 1;
 }
 
@@ -78,8 +80,7 @@ int RouterClass::readFromRaw(){
                 return -1;
          */
 
-
-        printf("Router%d: Read a packet from raw_socket, packet length:%d\n", id+1, buflen);
+        //printf("Router%d: Read a packet from raw_socket, packet length:%d\n", id+1, buflen);
 
         Packet* p = new Packet(buffer, buflen);
 

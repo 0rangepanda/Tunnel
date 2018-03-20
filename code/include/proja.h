@@ -9,6 +9,8 @@
 /* -------------------- Global Variables -------------------- */
 int stage;
 int num_routers;
+int minitor_hops;
+
 pid_t router_pid;
 short unsigned int udp_port;
 
@@ -24,6 +26,9 @@ struct sockaddr_in* eth;
 int sock;
 int tun_fd;
 struct sockaddr_in addr;
+
+int* routers_pid;
+int* routers_port;
 
 /* -------------- Global Variables for Router Only -------------- */
 int raw_sock = 0;

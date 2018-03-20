@@ -70,10 +70,20 @@ int ProxyClass::readFromTunnel()
                 {
                         //std::cout << "parse" << "\n";
                         //p->printPacket();
-                        LOG(logfd, "ICMP from tunnel, src: %s, dst: %s, type: %d\n", p->src.data(), p->dst.data(), p->type);
+                        LOG(logfd, "ICMP from tunnel, src: %s, dst: %s, type: %d\n",
+                            p->src.data(), p->dst.data(), p->type);
 
                         //TODO: send it to the router
-                        p->sendUDP(routerAddr, sock, p->getPacket(), p->getPacketLen());
+                        if (stage<4)
+                                p->sendUDP(routerAddr, sock, p->getPacket(), p->getPacketLen());
+                        else if (stage==4)
+                                p->sendUDP(hashDstIP(p->dst), sock,
+                                           p->getPacket(),p->getPacketLen());
+                        else if (stage==5)
+                                tun2Circ(&circ1,p->getPacket(),p->getPacketLen());
+                        else if (stage==6)
+                                enc_tun2Circ(&circ1,p->getPacket(),p->getPacketLen());
+
                 }
                 else
                         fprintf(stderr, "Invalid packet!\n");

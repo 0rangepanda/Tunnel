@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <limits.h>
+#include <assert.h>
+
 #include <linux/if_tun.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -35,6 +38,7 @@
 #include <vector>
 #include <iterator>
 
+
 using namespace std;
 
 #ifndef NULL
@@ -47,7 +51,7 @@ using namespace std;
 #endif /* ~TRUE */
 
 #ifndef BUF_SIZE
-#define BUF_SIZE 128
+#define BUF_SIZE 512
 #endif /* ~BUF_SIZE */
 
 #ifndef MAXSIZE
@@ -58,6 +62,10 @@ using namespace std;
 #define MAXPATHLENGTH 256
 #endif /* ~MAXPATHLENGTH */
 
+#ifndef MAXPKTLEN
+#define MAXPKTLEN 512
+#endif /* ~MAXPKTLEN */
+
 #ifndef EXIT_SUCCESS
 #define EXIT_SUCCESS 1
 #endif /* ~EXIT_SUCCESS */
@@ -65,5 +73,12 @@ using namespace std;
 #ifndef IPV4_OFFSET
 #define IPV4_OFFSET 20
 #endif /* ~IPV4_OFFSET */
+
+
+
+typedef unsigned char __u;   //1bit
+typedef uint8_t       __u8;  //1bit
+typedef uint16_t      __u16; //2bit
+typedef uint32_t      __u32; //4bit
 
 #endif

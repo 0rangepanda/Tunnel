@@ -21,6 +21,7 @@ public:
 
         int parse();
         int icmpReply();
+        int changeSrc(string srcIP);
         int changeDst(string dstIP);
         int sendUDP(struct sockaddr_in *addr, int sock, char* payload, int len);
 

@@ -1,7 +1,8 @@
 #include "proxy.h"
 
 /**************************************************************
-    Monitor thread: For catching ctrl+c and cleanup
+ * Monitor thread: For catching ctrl+c and cleanup
+ * NOTE: after stage4, there will be multiple routers to be terminated
  ***************************************************************/
 void* Monitor(void* arg){
         int sig;
@@ -13,11 +14,26 @@ void* Monitor(void* arg){
 
         close(tun_fd);
         /* kill router process */
-        int status;
-        kill(router_pid, SIGTERM);
-        wait(&status);
-        if (WIFSIGNALED(status)) //if child proc terminate because of signal
-                printf("Child process received singal %d\n", WTERMSIG(status));
+        if (stage<4)
+        {
+                int status;
+                kill(router_pid, SIGTERM);
+                wait(&status);
+                if (WIFSIGNALED(status)) //if child proc terminate because of signal
+                        printf("Child process received singal %d\n", WTERMSIG(status));
+        }
+        else
+        {
+                for (int i = 0; i < num_routers; ++i)
+                {
+                        int status;
+                        kill(routers_pid[i], SIGTERM);
+                        wait(&status);
+                        if (WIFSIGNALED(status)) //if child proc terminate because of signal
+                                printf("Child process %d received singal %d\n",
+                                       routers_pid[i], WTERMSIG(status));
+                }
+        }
 
         fflush(logfd);
         close(sock);
@@ -27,18 +43,31 @@ void* Monitor(void* arg){
         pthread_mutex_unlock(&mutex);
 }
 
+
 /**************************************************************
-    Proxy thread
- ***************************************************************/
+ * Proxy thread
+ ****************************************************************/
 void* Proxy(void* arg)
 {
         /* Setting up */
         ProxyClass *proxy = new ProxyClass(stage, sock);
         logfd = proxy->startLog();
-        proxy->stage1();
+
+        if (stage<4)
+                proxy->stage1();
+        else
+                proxy->stage4();
 
         proxy->showRouterIP();
 
+        /* Build Circuit */
+        sleep(1);
+        if (stage==5)
+                proxy->buildCirc(minitor_hops);
+        else if (stage==6)
+                proxy->enc_buildCirc(minitor_hops);
+
+        /* Main loop */
         if (stage>1)
         {
                 tun_fd = proxy->tunAlloc();
@@ -63,7 +92,13 @@ void* Proxy(void* arg)
                         default:
                                 if(FD_ISSET(sock, &readset))
                                 {
-                                        proxy->readFromRouter();
+                                        if (stage<5)
+                                                proxy->readFromRouter();
+                                        else if (stage==5)
+                                                proxy->readFromRouter_5();
+                                        else if (stage==6)
+                                                proxy->readFromRouter_6();
+
                                 }
                                 if(FD_ISSET(tun_fd, &readset))
                                 {
