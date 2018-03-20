@@ -9,7 +9,7 @@
 int RouterClass::rawAlloc(){
         raw_socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
         if (bind(raw_socket, (struct sockaddr*) &eth[id], addrlen)) {
-                perror("bind");
+                perror("raw bind");
                 exit(EXIT_FAILURE);
         }
 
