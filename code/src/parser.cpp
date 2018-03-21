@@ -127,17 +127,27 @@ int Packet::icmpReply()
 *******************************************************************/
 int Packet::changeSrc(string srcIP)
 {
-        //get dst ip address in a 32bit int
+        //get src ip address in a 32bit int
         struct sockaddr_in src;
         memset(&src, 0, sizeof(struct sockaddr_in));
         inet_aton(srcIP.c_str(), &src.sin_addr);
         int ip = src.sin_addr.s_addr;
 
-        //change dst in place
+        //change src in place
         for(size_t i=0; i<4; i++)
         {
                 *(packet+IPV4_OFFSET-8+i) = (ip >> 8*i) & 0xFF;
         }
+
+        //renew src
+        std::stringstream ss;
+        char buf[BUF_SIZE];
+        for(size_t i=0; i<4; i++) {
+                memset(&buf, 0, sizeof(buf));
+                sprintf(&buf[0], "%d", 0xFF & *(packet+IPV4_OFFSET-8+i));
+                ss << buf << '.';
+        }
+        this->src = ss.str().substr(0, ss.str().length()-1);
 
         return 1;
 }
@@ -160,6 +170,15 @@ int Packet::changeDst(string dstIP)
                 *(packet+IPV4_OFFSET-4+i) = (ip >> 8*i) & 0xFF;
         }
 
+        //renew dst
+        std::stringstream ss;
+        char buf[BUF_SIZE];
+        for(size_t i=0; i<4; i++) {
+                memset(&buf, 0, sizeof(buf));
+                sprintf(&buf[0], "%d", 0xFF & *(packet+IPV4_OFFSET-4+i));
+                ss << buf << '.';
+        }
+        this->dst = ss.str().substr(0, ss.str().length()-1);
         return 1;
 }
 
