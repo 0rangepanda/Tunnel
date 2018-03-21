@@ -126,13 +126,19 @@ int ProxyClass::enc_extCirc(struct circuit* circ, int hop_num)
         ctlmsg->setCircId(circ->id, circ->seq);
 
         __u16 port = (hop_num!=circ->len-1) ? (__u16) routers_port[circ->hops[hop_num+1]] : (__u16) 0xffff;
-        struct ctlmsg* tmpport;
-        tmpport->next_name = htons(port);
-        char* payload = (char* )tmpport;
+
         int len = 2;
+        //struct ctlmsg* tmpport;
+        //tmpport->next_name = htons(port);
+        //char* payload = (char* )tmpport;
+        char* payload = (char*)malloc(sizeof(char)*2);
+        *payload     = htons(port) & 0xff;
+        *(payload+1) = htons(port) >> 8;
+
+        printf("port: 0x%x\n", htons(port));
+        printf("payload: 0x%s\n", packet_str(payload, len));
 
         AesClass* aes = new AesClass();
-
         for (int i = 0; i < hop_num+1; ++i)
         {
                 char *tmp;
