@@ -283,7 +283,7 @@ int ProxyClass::readFromRouter_6()
         Packet *p = new Packet(payload, len);
         if (p->parse())
         {
-                p->changeDst(srcMap[incId]);
+                p->changeDst(srcMap[circ->id*256+circ->seq]);
                 LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n", routerAddr->sin_port, p->src.data(), p->dst.data(), p->type);
                 //send it to the tunnel
                 write(tun_fd, p->getPacket(), p->getPacketLen());
