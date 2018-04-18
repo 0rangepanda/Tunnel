@@ -54,7 +54,7 @@ int ProxyClass::extCirc(struct circuit* circ, int next_hop)
 
         __u16 port;
         if (next_hop>=0)
-                port = unsigned(routers_port[next_hop]);//(__u16) routers_port[next_hop];
+                port = unsigned(routers_port[next_hop]); //(__u16) routers_port[next_hop];
         else
                 //NEXT-NAME should be 0xffff if this is the last hop of the circuit
                 port = (__u16) 0xffff;
@@ -101,10 +101,12 @@ int ProxyClass::readFromRouter_5()
 
         CtlmsgClass* ctlmsg = new CtlmsgClass(buffer, len);
         Packet *p = new Packet(ctlmsg->getPayload(), ctlmsg->getPayloadLen());
+        p->parse();
 
-        if (p->parse())
+        if (p->type==1)
         {
-                LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n", routerAddr->sin_port, p->src.data(), p->dst.data(), p->type);
+                LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n",
+                    routerAddr->sin_port, p->src.data(), p->dst.data(), p->icmptype);
                 //send it to the tunnel
                 write(tun_fd, p->getPacket(), p->getPacketLen());
         }

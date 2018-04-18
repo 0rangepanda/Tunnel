@@ -217,6 +217,7 @@ int ProxyClass::enc_tun2Circ(struct circuit *circ, char *packet, int len)
 {
         Packet* p = new Packet(packet, len);
         p->parse();
+
         int cricID = circ->id*256 + circ->seq;
         srcMap.insert(make_pair(cricID, p->src));
         printf("%d -> %s\n", cricID, p->src.data());
@@ -283,11 +284,14 @@ int ProxyClass::readFromRouter_6()
 
         //send to tunnel
         Packet *p = new Packet(payload, len);
-        if (p->parse())
+        p->parse();
+
+        if (p->type)
         {
                 printf("DEBUG: %d -> %s\n", circ1.id*256+circ1.seq, srcMap[circ1.id*256+circ1.seq].data());
                 p->changeDst(srcMap[circ1.id*256+circ1.seq]);
-                LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n", routerAddr->sin_port, p->src.data(), p->dst.data(), p->type);
+                LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n",
+                    routerAddr->sin_port, p->src.data(), p->dst.data(), p->icmptype);
                 //send it to the tunnel
                 write(tun_fd, p->getPacket(), p->getPacketLen());
         }

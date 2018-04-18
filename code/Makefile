@@ -6,6 +6,9 @@ CPP = g++
 CPPFLAGS = -std=c++11 -g -c -o
 FLAGS = -lpthread -lcrypto
 
+DEPFLAGS = -MM -std=c++11
+DEPFILE = $@.$$$$
+
 INCLUDEDIR := -I.\
               -I./include\
 
@@ -17,8 +20,6 @@ DEPS 			:= $(addsuffix .d, $(addprefix dep/,$(BASE)))
 VPATH 		:= $(SRCDIR)
 
 
-DEPFLAGS = -MM
-DEPFILE = $@.$$$$
 
 ifeq ("$(wildcard $(DIR_DEPS))", "")
 	DEP_DIR_DEPS:=dep

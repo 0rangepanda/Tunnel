@@ -32,10 +32,12 @@ int ProxyClass::readFromRouter()
         printf("\nProxy: Read a packet from Router, packet length:%d\n", strLen);
 
         Packet *p = new Packet(buffer, strLen);
-        if (p->parse())
+        p->parse();
+        if (p->type==1)
         {
                 p->printPacket();
-                LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n", routerAddr->sin_port, p->src.data(), p->dst.data(), p->type);
+                LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n",
+                    routerAddr->sin_port, p->src.data(), p->dst.data(), p->icmptype);
                 //send it to the tunnel
                 write(tun_fd, p->getPacket(), p->getPacketLen());
         }
@@ -66,12 +68,14 @@ int ProxyClass::readFromTunnel()
                 printf("\nProxy: Read a packet from tunnel, packet length:%d\n", nread);
                 //get an ICMP ECHO packet from tunnel interface
                 Packet *p = new Packet(buffer, nread);
-                if (p->parse())
+                p->parse();
+
+                if (p->type==1)
                 {
                         //std::cout << "parse" << "\n";
                         //p->printPacket();
                         LOG(logfd, "ICMP from tunnel, src: %s, dst: %s, type: %d\n",
-                            p->src.data(), p->dst.data(), p->type);
+                            p->src.data(), p->dst.data(), p->icmptype);
 
                         //TODO: send it to the router
                         if (stage<4)

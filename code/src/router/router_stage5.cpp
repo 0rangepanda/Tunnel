@@ -235,6 +235,7 @@ int RouterClass::recvRlyret(CtlmsgClass* recv_ctlmsg, __u16 inc_port)
         Packet *p = new Packet(recv_ctlmsg->getPayload(),
                                recv_ctlmsg->getPayloadLen());
         p->parse();
+
         LOG(logfd, "relay reply packet, circuit incoming: 0x%x, outgoing: 0x%x, src: %s, incoming dst: %s, outgoing dst: %s\n",
             incId, outId, p->src.data(), p->dst.data(), outip.data());
 
@@ -284,8 +285,9 @@ int RouterClass::readFromRaw_5(){
         int buflen = read(raw_socket,buffer,BUF_SIZE);
 
         Packet* p = new Packet(buffer, buflen);
+        p->parse();
 
-        if (p->parse())
+        if (p->type)
         {
                 int incId     = (id+1)*256 + 1;//only one circuit, seq=1
                 int outId     = circMap[incId];

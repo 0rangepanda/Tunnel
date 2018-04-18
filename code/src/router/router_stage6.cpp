@@ -297,8 +297,9 @@ int RouterClass::readFromRaw_6(){
                             (socklen_t *)&saddr_len);
 
         Packet* p = new Packet(buffer, buflen);
+        p->parse();
 
-        if (p->parse())
+        if (p->type)
         {
                 // checking the destination address of each packet
                 if (sendtoMe(p, raw_socket))

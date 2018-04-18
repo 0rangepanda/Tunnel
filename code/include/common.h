@@ -3,6 +3,8 @@
 
 #define _GLIBCXX_USE_C99 1
 
+#pragma once
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +24,9 @@
 
 #include <arpa/inet.h>
 #include <net/if.h>
+
+#include <linux/ip.h>
+#include <linux/icmp.h>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -73,7 +78,6 @@ using namespace std;
 #ifndef IPV4_OFFSET
 #define IPV4_OFFSET 20
 #endif /* ~IPV4_OFFSET */
-
 
 
 typedef unsigned char __u;   //1bit

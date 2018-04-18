@@ -83,11 +83,12 @@ int RouterClass::readFromRaw(){
         //printf("Router%d: Read a packet from raw_socket, packet length:%d\n", id+1, buflen);
 
         Packet* p = new Packet(buffer, buflen);
+        p->parse();
 
-        if (p->parse())
+        if (p->type==1)
         {
                 LOG(logfd, "ICMP from raw sock, src: %s, dst: %s, type: %d\n",
-                    p->src.data(), p->dst.data(), p->type);
+                    p->src.data(), p->dst.data(), p->icmptype);
                 // checking the destination address of each packet
                 if (this->sendtoMe(p, raw_socket))
                 {

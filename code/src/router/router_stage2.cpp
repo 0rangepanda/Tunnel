@@ -17,11 +17,12 @@ int RouterClass::readFromProxy()
         //get an ICMP ECHO packet from Proxy
         //reply to any ping packets that are addressed to itself
         Packet* p = new Packet(buffer, strLen);
+        p->parse();
 
-        if (p->parse())
+        if (p->type==1)
         {
                 LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n",
-                    proxyAddr->sin_port, p->src.data(), p->dst.data(), p->type);
+                    proxyAddr->sin_port, p->src.data(), p->dst.data(), p->icmptype);
 
                 // Reply to any ping packets that are addressed to itself (same as stage 2)
                 if (this->sendtoMe(p, sock)) {
