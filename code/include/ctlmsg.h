@@ -63,6 +63,7 @@ enum e_MsgType {
 **************************************************************************/
 struct ctlmsghdr
 {
+        struct iphdr iph;
         __u8 type;
         __u16 circ_id; //network byte order
 } __attribute__ ((packed));

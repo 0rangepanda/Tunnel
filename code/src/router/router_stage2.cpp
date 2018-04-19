@@ -5,44 +5,29 @@
 * For packets that go elsewhere, it should *rewrite* them to its own IP address
 * and then send them out a raw socket to the real world
 **************************************************************************/
-int RouterClass::readFromProxy()
+int RouterClass::handle_ICMPFromProxy(Packet* p)
 {
-        char buffer[BUF_SIZE];
-        memset(&buffer, 0, sizeof(buffer));
+        LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n",
+            proxyAddr->sin_port, p->src.data(), p->dst.data(), p->icmptype);
 
-        int strLen = recvfrom(sock, buffer, BUF_SIZE, 0,
-                              (struct sockaddr*) proxyAddr, (socklen_t*) &nSize);
-        printf("\nRouter%d: Read a packet from proxy, packet length:%d\n", id+1, strLen);
-
-        //get an ICMP ECHO packet from Proxy
-        //reply to any ping packets that are addressed to itself
-        Packet* p = new Packet(buffer, strLen);
-        p->parse();
-
-        if (p->type==1)
-        {
-                LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n",
-                    proxyAddr->sin_port, p->src.data(), p->dst.data(), p->icmptype);
-
-                // Reply to any ping packets that are addressed to itself (same as stage 2)
-                if (this->sendtoMe(p, sock)) {
-                        printf("Router%d: icmpreply to proxy!\n", id+1);
-                        //send it to the proxy
-                        p->icmpReply();
-                        //p->printPacket();
-                        p->sendUDP(proxyAddr, sock, p->getPacket(), p->getPacketLen());
-                }
-                else{
-                        // stage 4
-                        printf("Router%d: rewrite and send!\n", id+1);
-                        //save key-val
-                        record(p);
-                        this->rewritePkt(p);
-                }
-
+        // Reply to any ping packets that are addressed to itself (same as stage 2)
+        if (this->sendtoMe(p, sock)) {
+                printf("Router%d: icmpreply to proxy!\n", id+1);
+                //send it to the proxy
+                p->icmpReply();
+                //p->printPacket();
+                p->sendUDP(proxyAddr, sock, p->getPacket(), p->getPacketLen());
         }
-        else
-                fprintf(stderr, "Invalid packet!\n");
+        else{
+                // stage 4
+                printf("Router%d: rewrite and send!\n", id+1);
+                //save key-val
+                record(p);
+                //send out through raw sock
+                this->sendtoRaw(p);
+        }
+        delete p;
+        return 1;
 };
 
 /**************************************************************************
@@ -78,6 +63,7 @@ int RouterClass::sendtoMe(Packet* p, int socket)
                         return 1;
         }
 
+        //Not send to me
         return 0;
 }
 

@@ -22,7 +22,7 @@ int RouterClass::rawAlloc(){
 * and then send them out a raw socket to the real world
 * With sendmsg the kernel fills in the IP header for you
 **************************************************************************/
-int RouterClass::rewritePkt(Packet* p){
+int RouterClass::sendtoRaw(Packet* p){
         struct iovec iov;
         struct msghdr msgsent;
         struct sockaddr_in dest;
@@ -60,67 +60,37 @@ int RouterClass::rewritePkt(Packet* p){
 * checking the destination address of each packet that arrives, discarding
 * it if addressed elsewhere, otherwise picking it up and handling it
 **************************************************************************/
-int RouterClass::readFromRaw(){
-        // read raw socket
-        char buffer[BUF_SIZE];
-        memset(&buffer, 0, sizeof(buffer));
-        int buflen = read(raw_socket,buffer,BUF_SIZE);
+int RouterClass::handle_ICMPFromRaw(Packet* p){
 
-        /* Use recvfrom()
-
-           char *buffer = (char*)malloc(65536);
-           memset(buffer,0,65536);
-           struct sockaddr_in saddr;
-           int saddr_len = sizeof(saddr);
-
-           int buflen=recvfrom(raw_socket,buffer,65536,0,(struct sockaddr*)&saddr,
-                            (socklen_t *)&saddr_len);
-
-           if(buflen<0)
-                return -1;
-         */
-
-        //printf("Router%d: Read a packet from raw_socket, packet length:%d\n", id+1, buflen);
-
-        Packet* p = new Packet(buffer, buflen);
-        p->parse();
-
-        if (p->type==1)
+        LOG(logfd, "ICMP from raw sock, src: %s, dst: %s, type: %d\n",
+            p->src.data(), p->dst.data(), p->icmptype);
+        // checking the destination address of each packet
+        if (this->sendtoMe(p, raw_socket))
         {
-                LOG(logfd, "ICMP from raw sock, src: %s, dst: %s, type: %d\n",
-                    p->src.data(), p->dst.data(), p->icmptype);
-                // checking the destination address of each packet
-                if (this->sendtoMe(p, raw_socket))
+                //cout << "map: " << addressMap.at(p->src)<< endl;
+                //change the dst
+                if (addressMap.find(p->src) != addressMap.end())
                 {
-                        //cout << "map: " << addressMap.at(p->src)<< endl;
-                        //change the dst
-                        if (addressMap.find(p->src) != addressMap.end())
-                        {
-                                p->changeDst(addressMap[p->src]);
-                                // TODO: src address?
-                                // use a hashmap
-                                // key:dst -> val:src
-                                //
-                                // if: to people ping one same ip using one router
-                                // router cannot figure out the icmpReply belongs to whom
-                                // so: proxy should avoid this
+                        p->changeDst(addressMap[p->src]);
+                        // TODO: src address?
+                        // use a hashmap
+                        // key:dst -> val:src
+                        //
+                        // if: to people ping one same ip using one router
+                        // router cannot figure out the icmpReply belongs to whom
+                        // so: proxy should avoid this
 
-                                //send it to the proxy
-                                p->sendUDP(proxyAddr, sock, p->getPacket(), p->getPacketLen());
-                        }
-                        else
-                                //discard the packet;
-                                ;
-
+                        //send it to the proxy
+                        p->sendUDP(proxyAddr, sock, p->getPacket(), p->getPacketLen());
                 }
                 else
-                {
                         //discard the packet;
                         ;
-                }
 
         }
         else
-                fprintf(stderr, "Invalid packet!\n");
-
+        {
+                //discard the packet;
+                ;
+        }
 }

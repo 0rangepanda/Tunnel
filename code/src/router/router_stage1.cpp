@@ -61,3 +61,11 @@ int RouterClass::stage1() {
 int RouterClass::showIP(){
         printf("Router IP address: %s\n", inet_ntoa(selfAddr->sin_addr));
 }
+
+/**************************************************************************
+* Get router id
+**************************************************************************/
+int RouterClass::getId()
+{
+        return id;
+}

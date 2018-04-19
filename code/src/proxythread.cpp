@@ -92,17 +92,11 @@ void* Proxy(void* arg)
                         default:
                                 if(FD_ISSET(sock, &readset))
                                 {
-                                        if (stage<5)
-                                                proxy->readFromRouter();
-                                        else if (stage==5)
-                                                proxy->readFromRouter_5();
-                                        else if (stage==6)
-                                                proxy->readFromRouter_6();
-
+                                        readFromRouter(proxy);
                                 }
                                 if(FD_ISSET(tun_fd, &readset))
                                 {
-                                        proxy->readFromTunnel();
+                                        readFromTunnel(proxy);
                                 }
                         }
                         pthread_mutex_unlock(&mutex);
@@ -113,4 +107,78 @@ void* Proxy(void* arg)
         close(tun_fd);
         close(sock);
         fclose(logfd);
+}
+
+/**************************************************************
+ * Proxy: read a packet from router
+ ****************************************************************/
+int readFromRouter(ProxyClass *proxy)
+{
+        char buffer[BUF_SIZE];
+        memset(&buffer, 0, sizeof(buffer));
+
+        struct sockaddr_in* routerAddr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+        int nSize = sizeof(struct sockaddr);
+        int strLen = recvfrom(sock, buffer, BUF_SIZE, 0, (struct sockaddr*) routerAddr, (socklen_t*) &nSize);
+        printf("\nProxy: Read a packet from Router, packet length:%d\n", strLen);
+
+        Packet *p = new Packet(buffer, strLen);
+        p->parse();
+
+        if (p->type==1)
+        {
+                //ICMP
+                proxy->handle_ICMPFromRouter(p);
+        }
+        else if (p->type==6)
+        {
+                //TCP
+                /* code */
+        }
+        else if (p->type==253)
+        {
+                //Mantitor msg
+                if (stage==5) proxy->handle_Ctlmsg_5(p, routerAddr);
+                if (stage==6) proxy->handle_Ctlmsg_6(p, routerAddr);
+        }
+
+        return 1;
+}
+
+/**************************************************************
+ * Proxy: read a packet from tunnel
+ ****************************************************************/
+int readFromTunnel(ProxyClass *proxy)
+{
+        char buffer[BUF_SIZE];
+        memset(&buffer, 0, sizeof(buffer));
+
+        int nread = read(tun_fd,buffer,BUF_SIZE);
+
+        if(nread < 0)
+        {
+                perror("Reading from tunnel interface");
+                close(tun_fd);
+                exit(1);
+        }
+        else
+        {
+                printf("\nProxy: Read a packet from tunnel, packet length:%d\n", nread);
+
+                Packet *p = new Packet(buffer, nread);
+                p->parse();
+
+                if (p->type==1)
+                {
+                        //ICMP
+                        proxy->handle_ICMPFromTunnel(p);
+                }
+                else if (p->type==6)
+                {
+                        //TCP
+                        /* code */
+                }
+        }
+
+        return 1;
 }

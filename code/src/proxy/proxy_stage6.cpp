@@ -36,8 +36,13 @@ int ProxyClass::enc_buildCirc(int minitor_hops)
                 enc_extCirc(&circ1, i);
         }
 
+        //print circuit
+        printf("Circuit:");
+        for (int i = 0; i < minitor_hops-1; i++) {
+                printf("%d --> ", circ1.hops[i]+1);
+        }
+        printf("%d!\n", circ1.hops[minitor_hops-1]+1);
         printf("------------------------Build circuit done----------------------\n");
-        printf("Last hop: router%d!\n", circ1.hops[minitor_hops-1]+1);
         return 1;
 }
 
@@ -254,15 +259,18 @@ int ProxyClass::enc_tun2Circ(struct circuit *circ, char *packet, int len)
 * where S should be from the public Internet, and D the IP address of the
 * VM guest’s ethernet interface.
 **************************************************************************/
-int ProxyClass::readFromRouter_6()
+int ProxyClass::handle_Ctlmsg_6(Packet* p, struct sockaddr_in* routerAddr)
 {
+        /*
         char buffer[BUF_SIZE];
         memset(&buffer, 0, sizeof(buffer));
 
         int recvlen = recvfrom(sock, buffer, BUF_SIZE, 0, (struct sockaddr*) routerAddr, (socklen_t*) &nSize);
         printf("\nProxy: Read a packet from Router, packet length:%d\n", recvlen);
-
         CtlmsgClass* recv_ctlmsg = new CtlmsgClass(buffer, recvlen);
+        */
+
+        CtlmsgClass* recv_ctlmsg = new CtlmsgClass(p->getPacket(), p->getPacketLen());
         int incId = recv_ctlmsg->getCircId();
 
         char* payload = recv_ctlmsg->getPayload();
@@ -283,19 +291,21 @@ int ProxyClass::readFromRouter_6()
 
 
         //send to tunnel
-        Packet *p = new Packet(payload, len);
-        p->parse();
+        Packet *p1 = new Packet(payload, len);
+        p1->parse();
 
-        if (p->type)
+        if (p1->type)
         {
                 printf("DEBUG: %d -> %s\n", circ1.id*256+circ1.seq, srcMap[circ1.id*256+circ1.seq].data());
-                p->changeDst(srcMap[circ1.id*256+circ1.seq]);
+                p1->changeDst(srcMap[circ1.id*256+circ1.seq]);
                 LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n",
-                    routerAddr->sin_port, p->src.data(), p->dst.data(), p->icmptype);
+                    routerAddr->sin_port, p1->src.data(), p1->dst.data(), p1->icmptype);
                 //send it to the tunnel
-                write(tun_fd, p->getPacket(), p->getPacketLen());
+                write(tun_fd, p1->getPacket(), p1->getPacketLen());
         }
         else
                 fprintf(stderr, "Invalid packet!\n");
+
+        delete p1;
         delete p;
 }

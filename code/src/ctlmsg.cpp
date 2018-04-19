@@ -40,9 +40,18 @@ CtlmsgClass::CtlmsgClass(int t)
                 return;
         }
 
+
         packet = (char*)malloc(packet_len+1);
         memset(packet, 0, packet_len+1);
-        ctl = (struct ctlmsghdr*) packet;
+
+        struct iphdr * iph = (struct iphdr *)packet;
+        //fill IP header
+        iph->protocol = 253;
+        // use loop address
+        iph->saddr = inet_addr("127.0.0.1");
+        iph->daddr = inet_addr("127.0.0.1");
+
+        ctl = (struct ctlmsghdr*)packet;
         ctl->type = type;
         valid = 1;
 

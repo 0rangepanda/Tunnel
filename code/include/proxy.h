@@ -18,9 +18,6 @@ struct circuit {
         char** key;
 };
 
-/*------------------------------ Threads --------------------------------------*/
-extern void* Proxy(void* arg);
-extern void* Monitor(void* arg);
 
 /*----------------------------- Proxy Functions ------------------------------*/
 class ProxyClass
@@ -28,20 +25,22 @@ class ProxyClass
 public:
         ProxyClass(int stage, int sock);
 
+        //stage1
         int stage1();
-        int stage4();
         FILE* startLog();
         int tunAlloc();
 
-        int readFromRouter();
-        int readFromTunnel();
-
+        //stage2
+        int handle_ICMPFromRouter(Packet* p);
+        int handle_ICMPFromTunnel(Packet* p);
         int showRouterIP();
 
+        //stage4
+        int stage4();
         struct sockaddr_in* hashDstIP(string ip);
 
         //stage5
-        int readFromRouter_5();
+        int handle_Ctlmsg_5(Packet* p, struct sockaddr_in* routerAddr);
         int buildCirc(int minitor_hops);
         int extCirc(struct circuit* circ, int next_hop);
         int tun2Circ  (struct circuit* circ, char* packet, int len);
@@ -49,7 +48,7 @@ public:
         int recvCirc(struct circuit* circ);
 
         //stage6
-        int readFromRouter_6();
+        int handle_Ctlmsg_6(Packet* p, struct sockaddr_in* routerAddr);
         char* enc_genKey(int router_id);
         int enc_buildCirc(int minitor_hops);
         int enc_tun2Circ(struct circuit* circ, char* packet, int len);
@@ -76,5 +75,11 @@ private:
         //stage 6
         unordered_map<int, string> srcMap;   //NOTE: circuit ID (0xIDi) to src IP
 };
+
+/*------------------------------ Threads --------------------------------------*/
+extern void* Proxy(void* arg);
+extern void* Monitor(void* arg);
+extern int readFromRouter(ProxyClass *proxy);
+extern int readFromTunnel(ProxyClass *proxy);
 
 #endif

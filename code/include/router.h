@@ -9,33 +9,34 @@
 #include "ctlmsg.h"
 #include "aes.h"
 
-
-/*------------------------------ Threads --------------------------------------*/
-extern void Cleanup(int sig_num);
-extern void Router(int router_id);
-
 /*----------------------------- Router Functions ------------------------------*/
 class RouterClass
 {
 public:
         RouterClass(int stage, int num, struct sockaddr_in* addr);
+        int getId();
+        
+        //stage1
         int stage1();
-        int stage4();
         FILE* startLog();
-        int rawAlloc();
-
         int showIP();
 
+        //stage2
+        int handle_ICMPFromProxy(Packet* p);
         int sendtoMe(Packet* p, int socket);
         int record(Packet* p);
 
-        int rewritePkt(Packet* p);
-        int readFromProxy();
-        int readFromRaw();
+        //stage3
+        int rawAlloc();
+        int sendtoRaw(Packet* p);
+        int handle_ICMPFromRaw(Packet* p);
+
+        //stage4
+        int stage4();
 
         //stage5
-        int readFromRaw_5();
-        int readFromProxy_5();
+        int handle_ICMPFromRaw_5(Packet* p);
+        int handle_Ctlmsg_5(Packet* p, struct sockaddr_in* proxyAddr);
         int relayMsg   (CtlmsgClass* recv_ctlmsg, __u16 inc_port);
         int recvCtlmsg (CtlmsgClass* recv_ctlmsg, __u16 inc_port);
         int recvExtCtl (CtlmsgClass* recv_ctlmsg, __u16 inc_port);
@@ -45,8 +46,8 @@ public:
         int sendRlyret (Packet* p, __u16 inc_port, int seq);
 
         //stage6
-        int readFromRaw_6();
-        int readFromProxy_6();
+        int handle_ICMPFromRaw_6(Packet* p);
+        int handle_Ctlmsg_6(Packet* p, struct sockaddr_in* proxyAddr);
         int enc_recvFake   (CtlmsgClass* recv_ctlmsg, __u16 inc_port);
         int enc_relayMsg   (CtlmsgClass* recv_ctlmsg, __u16 inc_port);
         int enc_recvCtlmsg (CtlmsgClass* recv_ctlmsg, __u16 inc_port);
@@ -83,5 +84,12 @@ private:
         unordered_map<int, char*> keyMap;   //NOTE: circuit ID (0xIDi) to session key
 
 };
+
+/*------------------------------ Threads --------------------------------------*/
+extern void Cleanup(int sig_num);
+extern void Router(int router_id);
+extern int readFromProxy(RouterClass *router);
+extern int readFromRaw(RouterClass *router);
+
 
 #endif

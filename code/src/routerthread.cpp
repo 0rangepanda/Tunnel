@@ -25,9 +25,7 @@ void Router(int router_id) {
         logfd = router->startLog();
 
         if (stage<4)
-        {
                 sock = router->stage1();
-        }
         else
                 sock = router->stage4();
 
@@ -66,21 +64,11 @@ void Router(int router_id) {
                         default:
                                 if(FD_ISSET(sock, &readset))
                                 {
-                                        if (stage<5)
-                                                router->readFromProxy();
-                                        else if (stage==5)
-                                                router->readFromProxy_5();
-                                        else if (stage==6)
-                                                router->readFromProxy_6();
+                                        readFromProxy(router);
                                 }
                                 if(FD_ISSET(raw_sock, &readset))
                                 {
-                                        if (stage<5)
-                                                router->readFromRaw();
-                                        else if(stage==5)
-                                                router->readFromRaw_5();
-                                        else if(stage==6)
-                                                router->readFromRaw_6();
+                                        readFromRaw(router);
                                 }
                         }
                         pthread_mutex_unlock(&mutex);
@@ -92,4 +80,96 @@ void Router(int router_id) {
         close(raw_sock);
         fclose(logfd);
         return;
+}
+
+/**************************************************************
+ * Router: read a packet from proxy
+ ****************************************************************/
+int readFromProxy(RouterClass *router)
+{
+        char buffer[BUF_SIZE];
+        memset(&buffer, 0, sizeof(buffer));
+
+        struct sockaddr_in* proxyAddr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+        int nSize = sizeof(struct sockaddr);
+        int strLen = recvfrom(sock, buffer, BUF_SIZE, 0, (struct sockaddr*) proxyAddr, (socklen_t*) &nSize);
+        printf("\nRouter%d: Read a packet from proxy, packet length:%d\n", router->getId()+1, strLen);
+
+        Packet *p = new Packet(buffer, strLen);
+        p->parse();
+
+        if (p->type==1)
+        {
+                //ICMP
+                router->handle_ICMPFromProxy(p);
+        }
+        else if (p->type==6)
+        {
+                //TCP
+                /* code */
+        }
+        else if (p->type==253)
+        {
+                //Mantitor msg
+                if (stage==5) router->handle_Ctlmsg_5(p, proxyAddr);
+                if (stage==6) router->handle_Ctlmsg_6(p, proxyAddr);
+        }
+
+        delete p;
+        return 1;
+}
+
+/**************************************************************
+ * Router: read a packet from raw socket
+ ****************************************************************/
+int readFromRaw(RouterClass *router)
+{
+        /* Use recvfrom()
+
+           char *buffer = (char*)malloc(65536);
+           memset(buffer,0,65536);
+           struct sockaddr_in saddr;
+           int saddr_len = sizeof(saddr);
+
+           int buflen=recvfrom(raw_socket,buffer,65536,0,(struct sockaddr*)&saddr,
+                            (socklen_t *)&saddr_len);
+
+           if(buflen<0)
+                return -1;
+         */
+        // read raw socket
+        char buffer[BUF_SIZE];
+        memset(&buffer, 0, sizeof(buffer));
+        int buflen = read(raw_sock,buffer,BUF_SIZE);
+
+        if(buflen < 0)
+        {
+                perror("Reading from raw socket");
+                close(raw_sock);
+                exit(1);
+        }
+        else
+        {
+                printf("\nRouter%d: Read a packet from rawsock, packet length:%d\n", router->getId()+1, buflen);
+
+                Packet* p = new Packet(buffer, buflen);
+                p->parse();
+
+                if (p->type==1)
+                {
+                        //ICMP
+                        if (stage<=4) router->handle_ICMPFromRaw(p);
+                        if (stage==5) router->handle_ICMPFromRaw_5(p);
+                        if (stage==6) router->handle_ICMPFromRaw_6(p);
+                }
+                else if (p->type==6)
+                {
+                        //TCP
+                        /* code */
+                }
+
+                delete p;
+        }
+
+        return 1;
 }
