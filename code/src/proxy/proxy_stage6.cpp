@@ -12,6 +12,7 @@ int ProxyClass::enc_buildCirc(int minitor_hops)
         circ1.id  = 0;
         circ1.seq = 1;
         circ1.len = minitor_hops;
+        circ1.pkt_counter = 0;
 
         int* tmp = (int *)malloc(sizeof(int)*num_routers);
         srand(time(0));
@@ -24,7 +25,7 @@ int ProxyClass::enc_buildCirc(int minitor_hops)
         {
                 circ1.hops[i] = tmp[i];
                 circ1.key[i] = enc_genKey(circ1.hops[i]+1);
-                //printf("key for %d: %s\n", circ1.hops[i]+1, packet_str(circ1.key[i], 16));
+                //DEBUG("key for %d: %s\n", circ1.hops[i]+1, packet_str(circ1.key[i], 16));
                 LOG(logfd, "hop: %d, router: %d\n", i+1, circ1.hops[i]+1);
         }
 
@@ -34,14 +35,15 @@ int ProxyClass::enc_buildCirc(int minitor_hops)
         {
                 enc_sendKey(&circ1, i);
                 enc_extCirc(&circ1, i);
+                recvCirc(&circ1);
         }
 
         //print circuit
-        printf("Circuit:");
+        printf("Circuit:\n Proxy --> ");
         for (int i = 0; i < minitor_hops-1; i++) {
-                printf("%d --> ", circ1.hops[i]+1);
+                printf("R%d --> ", circ1.hops[i]+1);
         }
-        printf("%d!\n", circ1.hops[minitor_hops-1]+1);
+        printf("R%d!\n", circ1.hops[minitor_hops-1]+1);
         printf("------------------------Build circuit done----------------------\n");
         return 1;
 }
@@ -71,10 +73,8 @@ char* ProxyClass::enc_genKey(int router_id)
 int ProxyClass::enc_sendKey(struct circuit* circ, int hop_num)
 {
         //encrypt key
-
-        char *key;
         AesClass* aes = new AesClass();
-
+        char *key;
         key = circ->key[hop_num];
         int len = 16;
 
@@ -84,25 +84,9 @@ int ProxyClass::enc_sendKey(struct circuit* circ, int hop_num)
                 aes->set_encrypt_key(circ->key[hop_num-1-i]);
                 aes->encrpyt((unsigned char*)key, len,
                              (unsigned char**)&tmp, &tmp_len);
-                //printf("padlen: %d\n", tmp_len - len);
                 key = tmp;
                 len = tmp_len;
         }
-
-        /* decrypt
-           for (int i = 0; i < hop_num; ++i)
-           {
-                char *tmp; int tmp_len;
-                aes->set_decrypt_key(circ1.key[i]);
-                aes->decrypt((unsigned char*)key, len,
-                             (unsigned char**)&tmp, &tmp_len);
-                key = tmp;
-                len = tmp_len;
-                printf("decrypt key: %s\n", packet_str(key,len));
-           }
-         */
-
-
 
         //send out
         CtlmsgClass* ctlmsg = new CtlmsgClass(enc_fake_DH);
@@ -115,10 +99,9 @@ int ProxyClass::enc_sendKey(struct circuit* circ, int hop_num)
 
         // send the ctlmsg to the first_hop
         sendtoCirc(circ, ctlmsg->packet, ctlmsg->packet_len);
-        printf("send key to router %d\n", circ->hops[hop_num]+1);
+        DEBUG("Send key to R%d\n", circ->hops[hop_num]+1);
 
         return 1;
-
 };
 
 /**************************************************************************
@@ -140,8 +123,8 @@ int ProxyClass::enc_extCirc(struct circuit* circ, int hop_num)
         *payload     = htons(port) & 0xff;
         *(payload+1) = htons(port) >> 8;
 
-        printf("port: 0x%x\n", htons(port));
-        printf("payload: 0x%s\n", packet_str(payload, len));
+        DEBUG("port: 0x%x\n", htons(port));
+        DEBUG("payload: 0x%s\n", packet_str(payload, len));
 
         AesClass* aes = new AesClass();
         for (int i = 0; i < hop_num+1; ++i)
@@ -160,10 +143,10 @@ int ProxyClass::enc_extCirc(struct circuit* circ, int hop_num)
 
         // send the ctlmsg to the first_hop
         sendtoCirc(circ, ctlmsg->packet, ctlmsg->packet_len);
-        printf("send NEXTNAME to router %d\n", circ->hops[hop_num]+1);
+        DEBUG("Send NEXTNAME to R%d\n", circ->hops[hop_num]+1);
 
         // recv enc-extdone msg from the first_hop
-        recvCirc(circ);
+        //recvCirc(circ);
 
         return 1;
 };
@@ -185,8 +168,8 @@ int ProxyClass::sendtoCirc(struct circuit* circ, char* packet, int len)
 };
 
 /**************************************************************************
-* To send a packet over a circuit, the proxy will embed the IP packet in a
-* relay data control message.
+* Recv from a circuit and get the extend-done ctlmsg
+* NOTE: only used when building circuit
 **************************************************************************/
 int ProxyClass::recvCirc(struct circuit* circ)
 {
@@ -200,9 +183,13 @@ int ProxyClass::recvCirc(struct circuit* circ)
         CtlmsgClass* recv_ctlmsg = new CtlmsgClass(buffer, recvlen);
 
         LOG(logfd, "pkt from port: %d, length: %d, contents: 0x%s\n",
-            first_router->sin_port, recvlen, packet_str(buffer, recvlen));
+            first_router->sin_port,
+            recvlen-sizeof(struct iphdr),
+            packet_str(buffer+sizeof(struct iphdr),
+                       recvlen-sizeof(struct iphdr)));
+
         if (recv_ctlmsg->getType()==enc_ext_done) {
-                LOG(logfd, "incoming extend-done circuit, incoming: 0x%d from port: %d\n",
+                LOG(logfd, "incoming extend-done circuit, incoming: 0x%x from port: %d\n",
                     recv_ctlmsg->getCircId(), first_router->sin_port);
         }
 
@@ -223,9 +210,10 @@ int ProxyClass::enc_tun2Circ(struct circuit *circ, char *packet, int len)
         Packet* p = new Packet(packet, len);
         p->parse();
 
+        //update the IP address
         int cricID = circ->id*256 + circ->seq;
         srcMap.insert(make_pair(cricID, p->src));
-        printf("%d -> %s\n", cricID, p->src.data());
+        DEBUG("Map to %d -> %s\n", cricID, p->src.data());
         p->changeSrc("0.0.0.0");
 
         //onion-encrypt
@@ -241,7 +229,7 @@ int ProxyClass::enc_tun2Circ(struct circuit *circ, char *packet, int len)
                 len = tmp_len;
         }
 
-
+        //send it through
         CtlmsgClass* ctlmsg = new CtlmsgClass(enc_rly_data);
         ctlmsg->setPayload(packet, len);
         ctlmsg->setCircId(circ->id,circ->seq);
@@ -261,17 +249,8 @@ int ProxyClass::enc_tun2Circ(struct circuit *circ, char *packet, int len)
 **************************************************************************/
 int ProxyClass::handle_Ctlmsg_6(Packet* p, struct sockaddr_in* routerAddr)
 {
-        /*
-        char buffer[BUF_SIZE];
-        memset(&buffer, 0, sizeof(buffer));
-
-        int recvlen = recvfrom(sock, buffer, BUF_SIZE, 0, (struct sockaddr*) routerAddr, (socklen_t*) &nSize);
-        printf("\nProxy: Read a packet from Router, packet length:%d\n", recvlen);
-        CtlmsgClass* recv_ctlmsg = new CtlmsgClass(buffer, recvlen);
-        */
-
         CtlmsgClass* recv_ctlmsg = new CtlmsgClass(p->getPacket(), p->getPacketLen());
-        int incId = recv_ctlmsg->getCircId();
+        int circId = recv_ctlmsg->getCircId();
 
         char* payload = recv_ctlmsg->getPayload();
         int len = recv_ctlmsg->getPayloadLen();
@@ -294,10 +273,12 @@ int ProxyClass::handle_Ctlmsg_6(Packet* p, struct sockaddr_in* routerAddr)
         Packet *p1 = new Packet(payload, len);
         p1->parse();
 
-        if (p1->type)
+        if (p1->type==1)
         {
-                printf("DEBUG: %d -> %s\n", circ1.id*256+circ1.seq, srcMap[circ1.id*256+circ1.seq].data());
-                p1->changeDst(srcMap[circ1.id*256+circ1.seq]);
+                //DEBUG("DEBUG: %d == %d\n", circ1.id*256+circ1.seq, circId);
+                DEBUG("Map to %d -> %s\n", circ1.id*256+circ1.seq, srcMap[circ1.id*256+circ1.seq].data());
+
+                p1->changeDst(srcMap[circId]);
                 LOG(logfd, "ICMP from port: %d, src: %s, dst: %s, type: %d\n",
                     routerAddr->sin_port, p1->src.data(), p1->dst.data(), p1->icmptype);
                 //send it to the tunnel
@@ -306,6 +287,6 @@ int ProxyClass::handle_Ctlmsg_6(Packet* p, struct sockaddr_in* routerAddr)
         else
                 fprintf(stderr, "Invalid packet!\n");
 
-        delete p1;
-        delete p;
+        //delete p1;
+        return 1;
 }

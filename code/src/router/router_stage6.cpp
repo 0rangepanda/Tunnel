@@ -4,12 +4,6 @@
 * readFromProxy() for stage 6
 **************************************************************************/
 int RouterClass::handle_Ctlmsg_6(Packet *p, struct sockaddr_in *proxyAddr){
-        /*
-           char buffer[BUF_SIZE];
-           memset(&buffer, 0, sizeof(buffer));
-           int len = recvfrom(sock, buffer, BUF_SIZE, 0,
-                           (struct sockaddr*) proxyAddr, (socklen_t*) &nSize);
-         */
         LOG(logfd, "pkt from port: %d, length: %d, contents: 0x%s\n",
             proxyAddr->sin_port, p->getPacketLen(), packet_str(p->getPacket(), p->getPacketLen()));
 
@@ -26,8 +20,9 @@ int RouterClass::handle_Ctlmsg_6(Packet *p, struct sockaddr_in *proxyAddr){
 * A type filter using switch()
 **************************************************************************/
 int RouterClass::enc_recvCtlmsg(CtlmsgClass *recv_ctlmsg, __u16 inc_port) {
-        printf("Router %d recv type: 0x%x, from %d!\n", id + 1,
-               recv_ctlmsg->getType(), inc_port);
+        DEBUG("Router %drecv type: 0x%x, from %d!\n", id + 1,
+              recv_ctlmsg->getType(), inc_port);
+
         switch (recv_ctlmsg->getType()) {
         case enc_fake_DH:
                 enc_recvFake(recv_ctlmsg, inc_port);
@@ -35,6 +30,7 @@ int RouterClass::enc_recvCtlmsg(CtlmsgClass *recv_ctlmsg, __u16 inc_port) {
 
         case enc_rly_data:
                 enc_recvRlydata(recv_ctlmsg, inc_port);
+                if (stage==9) startTimer();
                 break;
 
         case enc_ext_ctl:
@@ -47,6 +43,11 @@ int RouterClass::enc_recvCtlmsg(CtlmsgClass *recv_ctlmsg, __u16 inc_port) {
 
         case enc_rly_return:
                 enc_recvRlyret(recv_ctlmsg, inc_port);
+                if (stage==9) resetTimer(); //also not being the last hop
+                break;
+
+        case router_kill:
+                recvKillMsg(recv_ctlmsg);
                 break;
 
         default:
@@ -112,8 +113,8 @@ int RouterClass::enc_recvFake(CtlmsgClass *recv_ctlmsg, __u16 inc_port) {
 **************************************************************************/
 int RouterClass::enc_recvExtCtl(CtlmsgClass *recv_ctlmsg, __u16 inc_port) {
         int incId = recv_ctlmsg->getCircId();
-        int seq = recv_ctlmsg->getSeq();
-        int inId = recv_ctlmsg->getId();
+        int seq =   recv_ctlmsg->getSeq();
+        int inId =  recv_ctlmsg->getId();
 
         struct sockaddr_in *outaddr =
                 (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
@@ -149,7 +150,8 @@ int RouterClass::enc_recvExtCtl(CtlmsgClass *recv_ctlmsg, __u16 inc_port) {
                 outaddr->sin_port = inc_port;
                 sendto(sock, donemsg->packet, donemsg->packet_len, 0,
                        (struct sockaddr *)outaddr, addrlen);
-        } else // knows about that circuit ID
+        }
+        else // knows about that circuit ID
         {
                 LOG(logfd,
                     "forwarding extend circuit: incoming: 0x%x, outgoing: 0x%x at %d\n",
@@ -179,7 +181,7 @@ int RouterClass::enc_recvRlydata(CtlmsgClass *recv_ctlmsg, __u16 inc_port) {
 
         int outId = circMap[incId];
         __u16 outport = portMap[outId];
-        printf("incID:%x, outID:%x, outport:%d\n", incId, outId, outport);
+        DEBUG("incID:%x, outID:%x, outport:%d\n", incId, outId, outport);
 
         // decrypt the payload
         AesClass *aes = new AesClass();
@@ -190,17 +192,52 @@ int RouterClass::enc_recvRlydata(CtlmsgClass *recv_ctlmsg, __u16 inc_port) {
                      recv_ctlmsg->getPayloadLen(), (unsigned char **)&tmp, &tmp_len);
 
         if (outport == 0xffff) {
+                /* Last hop router */
                 /* send to raw_socket */
-                printf("0xFFFF\n");
+                DEBUG("0xFFFF\n");
                 Packet *p = new Packet(tmp, tmp_len);
                 p->parse();
-                LOG(logfd,
-                    "outgoing packet, circuit incoming: 0x%x, incoming src: %s, outgoing "
-                    "src: %s, dst: %s\n",
-                    incId, p->src.data(), selfIP.data(), p->dst.data());
-                p->changeSrc(selfIP);
-                sendtoRaw(p);
-        } else {
+                //printIPhdr(p->getPacket(), p->getPacketLen());
+
+                if (p->type==1)
+                {
+                        //handle ICMP
+                        LOG(logfd,
+                            "outgoing packet, circuit incoming: 0x%x, incoming src: %s, outgoing "
+                            "src: %s, dst: %s\n",
+                            incId, p->src.data(), selfIP.data(), p->dst.data());
+                        p->changeSrc(selfIP);
+                        sendtoRaw(p);
+                }
+                else if (p->type==6)
+                {
+                        //handle TCP
+                        //change the tcp srcport to myport
+                        //p->changeSrcPort((__u16)selfAddr->sin_port);
+                        p->parseTCP();
+                        p->changeSrc(selfIP);
+                        //debug
+
+                        LOG(logfd,
+                            "outgoing TCP packet, circuit incoming: 0x%x, src IP/port: %s:%d, "
+                            "dst IP/port: %s:%d, seqno: %d, ackno: %d\n",
+                            incId, p->src.data(), p->srcport, p->dst.data(),
+                            p->dstport, p->seqno, p->ackno);
+
+                        tcp_sendtoRaw(p);
+                }
+
+                // * egress routers (last hop) must be able to map
+                // * incoming packets to  -> the correct return circuit.
+                if (stage==8 || stage==9)
+                {
+                        recOutPkt(p, outId);
+                }
+                // * end
+
+        }
+        else
+        {
                 /* forward */
                 LOG(logfd,
                     "relay encrypted packet, circuit incoming: 0x%x, outgoing: 0x%x\n",
@@ -223,7 +260,7 @@ int RouterClass::enc_recvRlyret(CtlmsgClass *recv_ctlmsg, __u16 inc_port) {
         __u16 outport = portMap[outId];
         string outip = ipMap[outId];
 
-        // decrypt the payload
+        // encrypt the payload
         AesClass *aes = new AesClass();
         char *tmp;
         int tmp_len;
@@ -231,7 +268,7 @@ int RouterClass::enc_recvRlyret(CtlmsgClass *recv_ctlmsg, __u16 inc_port) {
         aes->encrpyt((unsigned char *)recv_ctlmsg->getPayload(),
                      recv_ctlmsg->getPayloadLen(), (unsigned char **)&tmp, &tmp_len);
 
-        printf("Router %d encrypted:%d\n", id + 1, tmp_len);
+        DEBUG("Router %d encrypted:%d\n", id + 1, tmp_len);
 
         LOG(logfd, "relay reply packet, circuit incoming: 0x%x, outgoing: 0x%x\n",
             incId, outId);
@@ -250,6 +287,7 @@ int RouterClass::enc_sendRlyret(Packet *p, __u16 out_port, int outId) {
         CtlmsgClass *ctlmsg = new CtlmsgClass(enc_rly_return);
         ctlmsg->setCircId(outId);
 
+
         // encrypt the payload
         AesClass *aes = new AesClass();
         char *tmp;
@@ -266,6 +304,7 @@ int RouterClass::enc_sendRlyret(Packet *p, __u16 out_port, int outId) {
         outrouter->sin_family = AF_INET;
         outrouter->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         outrouter->sin_port = out_port;
+
 
         sendto(sock, ctlmsg->packet, ctlmsg->packet_len, 0,
                (struct sockaddr *)outrouter, addrlen);

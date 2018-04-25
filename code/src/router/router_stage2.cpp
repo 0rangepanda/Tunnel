@@ -26,7 +26,6 @@ int RouterClass::handle_ICMPFromProxy(Packet* p)
                 //send out through raw sock
                 this->sendtoRaw(p);
         }
-        delete p;
         return 1;
 };
 
@@ -58,7 +57,7 @@ int RouterClass::sendtoMe(Packet* p, int socket)
                         return 1;
                 }
         }
-        else if (socket==raw_socket) {
+        else if (socket==raw_socket || socket==tcp_socket) {
                 if (strcmp(dst.c_str(),inet_ntoa(eth[id].sin_addr))==0)
                         return 1;
         }

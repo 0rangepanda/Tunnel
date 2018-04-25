@@ -23,8 +23,10 @@ int ProxyClass::stage4()
                 routers_pid[router_id] = router_pid;
                 routers_port[router_id] = routerAddr->sin_port;
 
-                printf("\nRead a packet from Router%d, packet length:%d\n", router_id+1, strLen);
-                printf("    router ip is %s\n", inet_ntoa(eth[router_id].sin_addr));
+                next_nameMap[routerAddr->sin_port] = router_id;
+
+                printf("\nProxy read a packet from Router%d, packet length:%d\n", router_id+1, strLen);
+                DEBUG("Router%d ip: %s\n", router_id+1, inet_ntoa(eth[router_id].sin_addr));
 
                 if (stage > 4)
                         LOG(logfd, "router: %d, pid: %d, port: %d, IP:%s\n",
@@ -37,7 +39,7 @@ int ProxyClass::stage4()
         }
 
         for (size_t i = 0; i < num_routers; i++) {
-                printf("router port: %d\n", routers_port[i]);
+                DEBUG("Router%d port: %d\n", i+1, routers_port[i]);
         }
         return 1;
 };
@@ -59,7 +61,7 @@ struct sockaddr_in* ProxyClass::hashDstIP(string ip)
         ret->sin_family = AF_INET;
         ret->sin_addr.s_addr = routerAddr->sin_addr.s_addr;
 
-        printf("IP: %s\n", ip.c_str());
+        DEBUG("hashDstIP: input IP is %s\n", ip.c_str());
 
         //For destinations that are routers, send them directly
         if (ip.length()>12)

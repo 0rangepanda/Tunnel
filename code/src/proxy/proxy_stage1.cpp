@@ -10,6 +10,14 @@ ProxyClass::ProxyClass(int Istage, int Isock) {
         routerAddr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
         nSize = sizeof(struct sockaddr);
         addrlen = sizeof(struct sockaddr_in);
+
+        seq = 1;
+
+        //stage 9
+        router_status = (int*)malloc(sizeof(int)*num_routers);
+        for (int i = 0; i < num_routers; ++i)
+                router_status[i] = 1;
+
 };
 
 /**************************************************************************

@@ -1,5 +1,6 @@
 #This is a comment line, should be ignored
-stage 6
-# There can be other comments, or variable numbers of spaces or tabs in lines.
-num_routers 4
-minitor_hops 3
+stage 9
+# There can 9e other comments, or variable numbers of spaces or tabs in lines.
+num_routers 5
+minitor_hops 2
+die_after 3

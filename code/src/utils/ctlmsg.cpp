@@ -5,10 +5,10 @@
 **************************************************************************/
 CtlmsgClass::CtlmsgClass(int t)
 {
-        type = t;
-        packet_len = sizeof(struct ctlmsghdr) + MAXPKTLEN; // default pktlen
+        this->type = t;
+        this->packet_len = sizeof(struct ctlmsghdr) + MAXPKTLEN; // default pktlen
 
-        switch (type)
+        switch (this->type)
         {
         //stage 5
         case rly_data:
@@ -34,26 +34,35 @@ CtlmsgClass::CtlmsgClass(int t)
                 break;
         case enc_fake_DH:
                 break;
+
+        //stage 9
+        case router_kill:
+                packet_len = sizeof(struct ctlmsghdr);
+                break;
+        case router_worr:
+                packet_len = sizeof(struct ctlmsghdr) + sizeof(struct router_worried_msg);
+                break;
+
         default:
                 perror("Wrong contrl message type!");
-                valid = 0;
+                this->valid = 0;
                 return;
         }
 
 
-        packet = (char*)malloc(packet_len+1);
+        this->packet = (char*)malloc(packet_len+1);
         memset(packet, 0, packet_len+1);
 
-        struct iphdr * iph = (struct iphdr *)packet;
         //fill IP header
+        struct iphdr * iph = (struct iphdr *)packet;
         iph->protocol = 253;
         // use loop address
         iph->saddr = inet_addr("127.0.0.1");
         iph->daddr = inet_addr("127.0.0.1");
 
-        ctl = (struct ctlmsghdr*)packet;
-        ctl->type = type;
-        valid = 1;
+        this->ctl = (struct ctlmsghdr*)packet;
+        this->ctl->type = type;
+        this->valid = 1;
 
         return;
 }
@@ -66,48 +75,61 @@ CtlmsgClass::CtlmsgClass(int t)
 **************************************************************************/
 CtlmsgClass::CtlmsgClass(char* buffer, int len)
 {
-        valid = 1;
-        packet = buffer;
-        packet_len = len;
+        this->valid = 1;
+        this->packet = buffer;
+        this->packet_len = len;
 
-        ctl = (struct ctlmsghdr*) buffer;
-        type = ctl->type;
-        seq =     (ntohs(ctl->circ_id) >> 0) & 0xFF;
-        circ_id = (ntohs(ctl->circ_id) >> 8) & 0xFF;
+        this->ctl = (struct ctlmsghdr*) buffer;
+        this->type = ctl->type;
+        this->seq =     (ntohs(ctl->circ_id) >> 0) & 0xFF;
+        this->circ_id = (ntohs(ctl->circ_id) >> 8) & 0xFF;
 
-        switch (type)
+        this->payload = (char*) (buffer + sizeof(struct ctlmsghdr));
+
+        printf("Type: 0x%x, Circ Seq: %d\n", this->type, this->seq);
+
+        switch (this->type)
         {
         //stage 5
         case ext_ctl:
-                msg = (struct ctlmsg*) (buffer + sizeof(struct ctlmsghdr));
-                port = ntohs(msg->next_name);
+                this->msg = (struct ctlmsg*) (buffer + sizeof(struct ctlmsghdr));
+                this->port = ntohs(msg->next_name);
                 return;
-
-        case rly_data:
-                payload = (char*) buffer + sizeof(struct ctlmsghdr);
-                break;
 
         case ext_done:
                 return;
 
+        case rly_data:
+                this->payload = (char*) (buffer + sizeof(struct ctlmsghdr));
+                break;
+
         case rly_return:
-                payload = (char*) buffer + sizeof(struct ctlmsghdr);
+                this->payload = (char*) (buffer + sizeof(struct ctlmsghdr));
                 break;
 
         //stage 6
         case enc_rly_data:
-                payload = (char*) buffer + sizeof(struct ctlmsghdr);
+                this->payload = (char*) (buffer + sizeof(struct ctlmsghdr));
                 break;
         case enc_ext_ctl:
-                payload = (char*) buffer + sizeof(struct ctlmsghdr);
+                this->payload = (char*) (buffer + sizeof(struct ctlmsghdr));
                 break;
         case enc_ext_done:
                 return;
         case enc_rly_return:
-                payload = (char*) buffer + sizeof(struct ctlmsghdr);
+                this->payload = (char*) (buffer + sizeof(struct ctlmsghdr));
                 break;
         case enc_fake_DH:
-                payload = (char*) buffer + sizeof(struct ctlmsghdr);
+                this->payload = (char*) (buffer + sizeof(struct ctlmsghdr));
+                break;
+
+        //stage 9
+        case router_kill:
+                break;
+        case router_worr:
+                this->worr = (struct router_worried_msg*) (buffer + sizeof(struct ctlmsghdr));
+                this->next_name = ntohs(worr->next_name);
+                this->self_name = ntohs(worr->self_name);
                 break;
 
         default:
@@ -171,9 +193,9 @@ int CtlmsgClass::getSeq()
 /**************************************************************************
 * Nextname operation for type 0x52 and 0x53
 **************************************************************************/
-int CtlmsgClass::setCtlMsg(__u16 Iport)
+int CtlmsgClass::setCtlMsg(__u16 port)
 {
-        port = Iport;
+        this->port = port;
         msg = (struct ctlmsg*) (packet + sizeof(struct ctlmsghdr));
         msg->next_name = htons(port);
         return 1;
@@ -192,21 +214,68 @@ int CtlmsgClass::setPayload(char* input_payload, int len)
         if (len > MAXPKTLEN)
                 return -1;
 
-
         payload = (char*) (packet + sizeof(struct ctlmsghdr));
-        for (size_t i = 0; i <len; i++) {
-                *(payload++) = *(input_payload++);
-        }
+        memcpy(payload, input_payload, len);
         packet_len = len + sizeof(struct ctlmsghdr);
         return 1;
 }
 
 char* CtlmsgClass::getPayload()
 {
-        return payload;
+        switch (this->type)
+        {
+        //case ext_ctl:
+        //        return this->msg;
+        case router_worr:
+                return (char *)this->worr;
+
+        default:
+                return payload;
+        }
 }
 
 int CtlmsgClass::getPayloadLen()
 {
         return packet_len-sizeof(struct ctlmsghdr);
 }
+
+/**************************************************************************
+* For stage 9
+**************************************************************************/
+int CtlmsgClass::setWorr(__u16 self_name, __u16 next_name)
+{
+        this->self_name = self_name;
+        this->next_name = next_name;
+        this->worr = (struct router_worried_msg*) (packet + sizeof(struct router_worried_msg));
+        this->worr->next_name = ntohs(next_name);
+        this->worr->self_name = ntohs(self_name);
+        return 1;
+}
+
+__u16 CtlmsgClass::getSelf_Name()
+{
+        return this->self_name;
+}
+
+
+__u16 CtlmsgClass::getNext_Name()
+{
+        return this->next_name;
+}
+
+int CtlmsgClass::setPayload_worr(char* input_payload, int len)
+{
+        if (len > MAXPKTLEN)
+                return -1;
+
+        this->worr = (struct router_worried_msg*) (packet + sizeof(struct ctlmsghdr));
+        memcpy(this->worr, input_payload, len);
+        packet_len = len + sizeof(struct ctlmsghdr);
+        return 1;
+}
+
+
+
+
+
+//end

@@ -1,8 +1,16 @@
 a) Reused Code:
   No
-  
-b) Complete:
-  Stage 2 compelete
 
-c) Portable:
-Will your code always work if the proxy and the router were on different computers with different CPU architectures, like an IBM PowerPC and an AMD x86- 64? If so, why (what specifically did you do to support that case)? If not, why not (what problem would occur if run between different types of computers)? (Note that in your Project A, they are always on the same computer architecture because you’re just forking another process, not connecting to another computer. This question is about the hypothetical case of if they were on different computers with different CPU architectures.)
+b) Complete:
+  Stage 2 complete
+
+c) Router Selection:
+For the current approach to mapping traffic to routers,
+i) Why is that approach load balanced (at least statistically) over many flows to many targets?
+  Because statistically the value of ip address mod number of routers has a uniform distribution.
+
+ii) Are there degenerate cases where your load could become unbalanced? (Just yes or no.)
+  Yes
+
+iii) What is one such case?
+  Ping some specific ip address more than the others.

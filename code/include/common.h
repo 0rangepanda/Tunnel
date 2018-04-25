@@ -5,6 +5,7 @@
 
 #pragma once
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +27,7 @@
 #include <net/if.h>
 
 #include <linux/ip.h>
+#include <linux/tcp.h>
 #include <linux/icmp.h>
 
 #include <fcntl.h>
@@ -34,6 +36,7 @@
 #include <stdarg.h>
 #include <math.h>
 #include <ctype.h>
+#include <time.h>
 
 #include <iostream>
 #include <fstream>
@@ -56,7 +59,7 @@ using namespace std;
 #endif /* ~TRUE */
 
 #ifndef BUF_SIZE
-#define BUF_SIZE 512
+#define BUF_SIZE 4096
 #endif /* ~BUF_SIZE */
 
 #ifndef MAXSIZE
@@ -68,7 +71,7 @@ using namespace std;
 #endif /* ~MAXPATHLENGTH */
 
 #ifndef MAXPKTLEN
-#define MAXPKTLEN 512
+#define MAXPKTLEN 4096
 #endif /* ~MAXPKTLEN */
 
 #ifndef EXIT_SUCCESS

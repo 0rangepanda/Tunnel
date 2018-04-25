@@ -58,6 +58,8 @@ int initEth()
 static
 void Process()
 {
+        DEBUG_FLAG = 0;
+
         /* Handling Ctrl+C */
         sigemptyset(&signal_set);
         sigaddset(&signal_set, SIGINT);
@@ -75,7 +77,7 @@ void Process()
         //shoud be done befor fork() so that router can get the port by global var
         sock = UDP_alloc(&addr);
 
-        std::cout << "udp_port: " <<  addr.sin_port << "\n";
+        DEBUG("Proxy udp port: %d\n", addr.sin_port);
         udp_port = addr.sin_port;
 
         //fork then
@@ -90,7 +92,7 @@ void Process()
                 else if (router_pid == 0)
                 {
                         // Code only executed by child process
-                        printf("I am the Router process %d, my process id is %d\n", i+1, getpid());
+                        DEBUG("Router process %d, proc_id is %d\n", i+1, getpid());
                         Router(i);
                         return;
                 }
@@ -98,13 +100,13 @@ void Process()
 
 
         // Code only executed by parent process
-        printf("I am the Proxy process, my process id is %d\n",getpid());
+        DEBUG("Proxy process, proc_id is %d\n",getpid());
 
         pthread_create(&proxy_thread, NULL, Proxy, NULL);
         pthread_create(&monitor_thread, NULL, Monitor, NULL);
         pthread_join(proxy_thread,0);
         pthread_cancel(monitor_thread);
-        printf("Finish cleanning up, program end!\n");
+        DEBUG("Finish cleanning up, program end!\n");
         return;
 }
 

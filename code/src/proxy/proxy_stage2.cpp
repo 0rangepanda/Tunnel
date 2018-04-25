@@ -30,7 +30,8 @@ int ProxyClass::handle_ICMPFromRouter(Packet* p)
             routerAddr->sin_port, p->src.data(), p->dst.data(), p->icmptype);
         //send it to the tunnel
         write(tun_fd, p->getPacket(), p->getPacketLen());
-        delete p;
+        //delete p;
+        return 1;
 }
 
 /**************************************************************************
@@ -44,6 +45,12 @@ int ProxyClass::handle_ICMPFromTunnel(Packet* p)
         LOG(logfd, "ICMP from tunnel, src: %s, dst: %s, type: %d\n",
             p->src.data(), p->dst.data(), p->icmptype);
 
+        struct circuit* circ;
+        if (stage!=8)
+                circ = &circ1;
+        else
+                circ = flowMap[p->f];
+
         //TODO: send it to the router
         if (stage<4)
                 p->sendUDP(routerAddr, sock, p->getPacket(), p->getPacketLen());
@@ -51,15 +58,16 @@ int ProxyClass::handle_ICMPFromTunnel(Packet* p)
                 p->sendUDP(hashDstIP(p->dst), sock,
                            p->getPacket(),p->getPacketLen());
         else if (stage==5)
-                tun2Circ(&circ1,p->getPacket(),p->getPacketLen());
-        else if (stage==6)
-                enc_tun2Circ(&circ1,p->getPacket(),p->getPacketLen());
-        delete p;
+                tun2Circ(circ,p->getPacket(),p->getPacketLen());
+        else if (stage>5)
+                enc_tun2Circ(circ,p->getPacket(),p->getPacketLen());
+        //delete p;
+        return 1;
 }
 
 /**************************************************************************
 * For debug
 **************************************************************************/
 int ProxyClass::showRouterIP(){
-        printf("IP address: %s\n", inet_ntoa(routerAddr->sin_addr));
+        //printf("IP address: %s\n", inet_ntoa(routerAddr->sin_addr));
 }

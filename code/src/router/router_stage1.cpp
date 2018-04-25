@@ -59,7 +59,7 @@ int RouterClass::stage1() {
 * For debug
 **************************************************************************/
 int RouterClass::showIP(){
-        printf("Router IP address: %s\n", inet_ntoa(selfAddr->sin_addr));
+        //printf("Router IP address: %s\n", inet_ntoa(selfAddr->sin_addr));
 }
 
 /**************************************************************************

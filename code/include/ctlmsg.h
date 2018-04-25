@@ -1,10 +1,6 @@
 #ifndef _CTLMSG_H_
 #define _CTLMSG_H_
 
-#ifndef MAXPKTLEN
-#define MAXPKTLEN 512
-#endif /* ~MAXPKTLEN */
-
 #include <linux/ip.h>
 #include <unordered_map>
 
@@ -59,6 +55,15 @@ enum e_MsgType {
 };
 
 /**************************************************************************
+* kill router    type: 0x91
+* router worried type: 0x92
+**************************************************************************/
+enum FailureRec {
+        router_kill   = 0x91,
+        router_worr   = 0x92
+};
+
+/**************************************************************************
 * Msg Header: 1 byte of type + 2 byte of circuit id
 **************************************************************************/
 struct ctlmsghdr
@@ -74,6 +79,17 @@ struct ctlmsghdr
 **************************************************************************/
 struct ctlmsg
 {
+        __u16 next_name;
+} __attribute__ ((packed));
+
+/**************************************************************************
+* Then it should generate a router-worried, control message type 0x92, with
+* the circuit ID, SELF-NAME and NEXT-NAME, to indicate that itself (router
+* ID SELF-NAME) thinks router NEXT-NAME may be down.
+**************************************************************************/
+struct router_worried_msg
+{
+        __u16 self_name;
         __u16 next_name;
 } __attribute__ ((packed));
 
@@ -100,6 +116,14 @@ public:
         char* getPayload();
         int getPayloadLen();
 
+        //stage 9
+        int setWorr(__u16 self_name, __u16 next_name);
+        int setPayload_worr(char* payload, int len);
+        __u16 getSelf_Name();
+        __u16 getNext_Name();
+
+
+        //public vars
         char* packet;
         int packet_len;
 
@@ -113,13 +137,16 @@ private:
         int type;
         __u16 port;
 
+        __u16 self_name;
+        __u16 next_name;
         //char* packet;
         //int packet_len;
 
         struct ctlmsghdr *ctl;
         union {
-                struct ctlmsg* msg; //0x52
-                char* payload;      //0x51 and 0x54 and for encrypted message
+                struct ctlmsg* msg;                //0x52 only
+                struct router_worried_msg* worr;   //0x92 only
+                char* payload;                     //other cases
         };
 
 };

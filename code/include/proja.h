@@ -10,6 +10,7 @@
 int stage;
 int num_routers;
 int minitor_hops;
+int die_after;
 
 pid_t router_pid;
 short unsigned int udp_port;
@@ -22,6 +23,8 @@ pthread_t proxy_thread, monitor_thread;
 
 struct sockaddr_in* eth;
 
+int DEBUG_FLAG = 1;
+
 /* -------------- Global Variables for Proxy Only --------------- */
 int sock;
 int tun_fd;
@@ -32,5 +35,6 @@ int* routers_port;
 
 /* -------------- Global Variables for Router Only -------------- */
 int raw_sock = 0;
+int tcp_sock = 0;
 
 #endif

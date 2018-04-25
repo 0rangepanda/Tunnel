@@ -2,7 +2,7 @@
 
 
 /**************************************************************************
-* open a raw IP socket with the socket API
+* open a raw ICMP socket with the socket API
 * review the raw(7) man page (man 7 raw)
 * NOTE: bind this socket to the Designate eth IP
 **************************************************************************/
@@ -13,7 +13,7 @@ int RouterClass::rawAlloc(){
                 exit(EXIT_FAILURE);
         }
 
-        printf("bind to:%s ...\n", inet_ntoa(eth[id].sin_addr));
+        //DEBUG("Router%d bind to:%s \n", id+1, inet_ntoa(eth[id].sin_addr));
         return raw_socket;
 }
 

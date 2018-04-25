@@ -96,17 +96,7 @@ int ProxyClass::extCirc(struct circuit* circ, int next_hop)
 **************************************************************************/
 int ProxyClass::handle_Ctlmsg_5(Packet* p, struct sockaddr_in* routerAddr)
 {
-        /*
-        char buffer[BUF_SIZE];
-        memset(&buffer, 0, sizeof(buffer));
-        int len = recvfrom(sock, buffer, BUF_SIZE, 0, (struct sockaddr*) routerAddr, (socklen_t*) &nSize);
-
-        LOG(logfd, "pkt from port: %d, length: %d, contents: 0x%s\n",
-            routerAddr->sin_port, len, packet_str(buffer, len));
-
-        CtlmsgClass* ctlmsg = new CtlmsgClass(buffer, len);
-        */
-
+        
         LOG(logfd, "pkt from port: %d, length: %d, contents: 0x%s\n",
             routerAddr->sin_port, p->getPacketLen(), packet_str(p->getPacket(), p->getPacketLen()));
 
